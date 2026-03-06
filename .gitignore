@@ -1,0 +1,14 @@
+*/Debug/
+*/Release/
+.DS_Store
+*.elf
+*.o
+*.map
+*.d
+*.su
+*.cyclo
+*.list
+objects.list
+objects.mk
+sources.mk
+makefile
