@@ -32,6 +32,7 @@
 | 07 | FreeRTOS — Dual Task Priority with SWV ITM Tracing | FreeRTOS, CMSIS-V2, SWV ITM Console, Priority Scheduling |
 | 08 | FreeRTOS — Binary Semaphore with EXTI Button Interrupt | FreeRTOS, Binary Semaphore, EXTI, Deferred Interrupt Processing |
 | 09 | FreeRTOS — Inter-Task Communication via Queue | FreeRTOS, Queue, FIFO, Sensor Data Transfer |
+| 10 | FreeRTOS — Counting Semaphore Resource Access Control | FreeRTOS, Counting Semaphore, Resource Sharing, Task Interleaving |
 
 ---
 
@@ -212,6 +213,48 @@ Producer Task                    Queue (FIFO)             Consumer Task
 Read sensor data   ──Send──►  [ slot ][ slot ]  ──Receive──►  Process & print
 osDelay()                                                   osDelay()
 ```
+
+---
+
+### 10 — FreeRTOS Counting Semaphore — Shared Resource Access Control
+**AIM:** Model a limited shared resource using a FreeRTOS counting semaphore and study access control when multiple tasks request the resource simultaneously.
+
+- **3 tasks** created: `TaskA`, `TaskB`, `TaskC` using CMSIS-RTOS V2
+- **Counting semaphore** initialized with count = **2** (max 2 tasks can hold resource at once)
+- Each task calls `osSemaphoreAcquire()` before accessing the ITM trace resource and `osSemaphoreRelease()` after
+- `printf` retargeted to **SWV ITM Console** via `ITM_SendChar()`
+- Demonstrates **task interleaving** — with count=2, two tasks print simultaneously causing garbled output
+- Difference between **counting semaphore** (quantity control) vs **mutex** (mutual exclusion) clearly observed
+
+**Key Concept:**
+```
+Counting Semaphore (count=2):
+  TaskA acquires → count becomes 1
+  TaskB acquires → count becomes 0
+  TaskC tries    → BLOCKED (count = 0, waits)
+  TaskA releases → count becomes 1 → TaskC unblocks
+```
+
+**Key Code Snippets:**
+```c
+// TaskA — acquires semaphore, prints 10 'A' chars, releases
+void func_TaskA(void *argument) {
+    char ch = 'A';
+    for(;;) {
+        osSemaphoreAcquire(myCountingSem01Handle, osWaitForever);
+        printf("1");
+        for(int i = 0; i < 10; i++) {
+            printf("%c", ch);
+            HAL_Delay(50);
+        }
+        osSemaphoreRelease(myCountingSem01Handle);
+        osDelay(5);
+    }
+}
+// TaskB and TaskC follow same pattern with 'B' and 'C'
+```
+
+> ⚠️ **Observation:** ITM output shows interleaved characters (e.g. `ACACAC`, `BABABAB`) because counting semaphore allows 2 tasks simultaneously — it controls **quantity** but NOT **atomicity** of the shared channel.
 
 ---
 
